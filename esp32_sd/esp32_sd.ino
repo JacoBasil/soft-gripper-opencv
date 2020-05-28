@@ -24,7 +24,7 @@ CRGB leds_1[NUM_LEDS];
 CRGB leds_2[NUM_LEDS];
 CRGB leds_3[NUM_LEDS];
 String dataMessage;
-char* filename = "/data2.txt";
+char* filename = "/data5.txt";
 unsigned long int readingID = 0;
 unsigned long int _time;  // Seconds
 byte counter;
@@ -92,7 +92,7 @@ void loop() {
   int FSR_max = max3(FSR_1_reading, FSR_2_reading, FSR_3_reading);
   //int FSR_avg = int((FSL_1_reading + FSL_2_reading + FSL_3_reading)/3);
   // setting up color of each actuator
-  int hue = map(FSR_max, 0, 1500, 165, 255);
+  int hue = map(FSR_max, 0, 2400, 165, 255);
 
   
   for (int i = 0; i < NUM_LEDS; i++ ) {         // от 0 до первой трети
@@ -119,14 +119,17 @@ void loop() {
   Serial.print(FSR_2_reading);
   Serial.print("\t");
   Serial.print("Flex 2: ");
-  Serial.print(FSL_1_reading);
+  Serial.print(FSL_2_reading);
   Serial.print("\t");
   Serial.print("Force 3: ");
   Serial.print(FSR_3_reading);
   Serial.print("\t");
   Serial.print("Flex 3: ");
-  Serial.print(FSL_3_reading);
-  logSDCard();
+  Serial.printls(FSL_3_reading);
+  Serial.print("\t");
+  Serial.print("hue: ");
+  Serial.println(hue);
+  //logSDCard();
   readingID++;
 }
 
