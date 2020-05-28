@@ -24,7 +24,7 @@ CRGB leds_1[NUM_LEDS];
 CRGB leds_2[NUM_LEDS];
 CRGB leds_3[NUM_LEDS];
 String dataMessage;
-char* filename = "/data5.txt";
+char* filename = "/data_free_displacement.txt";
 unsigned long int readingID = 0;
 unsigned long int _time;  // Seconds
 byte counter;
@@ -34,13 +34,17 @@ int FSL_3_reading;
 int FSR_1_reading;
 int FSR_2_reading;
 int FSR_3_reading;
+int FSR_max;
+int FSL_avg;
+int hue;
+int F;
 
 void setup() {
   // initialize serial communication at 9600 bits per second:
   FastLED.addLeds<WS2811, PIN_LED_FIRST, GRB>(leds_1, NUM_LEDS).setCorrection( TypicalLEDStrip );
   FastLED.addLeds<WS2811, PIN_LED_SECOND, GRB>(leds_2, NUM_LEDS).setCorrection( TypicalLEDStrip );
   FastLED.addLeds<WS2811, PIN_LED_THIRD, GRB>(leds_3, NUM_LEDS).setCorrection( TypicalLEDStrip );
-  FastLED.setBrightness(100);
+  FastLED.setBrightness(150);
   Serial.begin(9600);
   
   // Initialize SD card
@@ -65,10 +69,13 @@ void setup() {
   if(!file) {
     Serial.println("File doens't exist");
     Serial.println("Creating file...");
-    writeFile(SD, filename, "ReadingID, time, fsr1, fsr2, fsr3, fsl1, fsl2, fsl3 \r\n");
+    writeFile(SD, filename, "ReadingID, time, fsr1, fsr2, fsr3, fsl1, fsl2, fsl3, fsr_max, fsl_avg, hue, force \r\n");
   }
   else {
-    Serial.println("File already exists");  
+    Serial.println("File already exists, remove, create new");
+    SD.remove(filename);
+    writeFile(SD, filename, "Start a new data harvesting... \r\n"); 
+    writeFile(SD, filename, "ReadingID, time, fsr1, fsr2, fsr3, fsl1, fsl2, fsl3, fsr_max, fsl_avg, hue, force \r\n");
   }
   file.close();
 }
@@ -82,18 +89,25 @@ int max3(int a, int b, int c)
 }
 // the loop routine runs over and over again forever:
 void loop() {
-  _time = millis()/1000;
+  _time = millis();
   FSL_1_reading = analogRead(PIN_FSL_1);
   FSR_1_reading = analogRead(PIN_FSR_1);
   FSL_2_reading = analogRead(PIN_FSL_2);
   FSR_2_reading = analogRead(PIN_FSR_2);
   FSL_3_reading = analogRead(PIN_FSL_3);
   FSR_3_reading = analogRead(PIN_FSR_3);
-  int FSR_max = max3(FSR_1_reading, FSR_2_reading, FSR_3_reading);
-  //int FSR_avg = int((FSL_1_reading + FSL_2_reading + FSL_3_reading)/3);
+  FSR_max = max3(FSR_1_reading, FSR_2_reading, FSR_3_reading);
+  FSL_avg = int((FSL_1_reading + FSL_2_reading + FSL_3_reading)/3);
+  int hue_max = 210;
+  int hue_min = 45;
+  FSR_max = map(FSR_max, 5, 2400, hue_max, hue_min);
+  FSL_avg = map(FSL_avg, 950, 1150, hue_max, hue_min);
+  FSR_max = constrain(FSR_max, hue_min, hue_max);
+  FSL_avg = constrain(FSL_avg, hue_min, hue_max);
   // setting up color of each actuator
-  int hue = map(FSR_max, 0, 2400, 165, 255);
-
+  hue = min(FSR_max, FSL_avg);
+  // force estimation
+  F = map(hue, 165, 250, 0, 4);
   
   for (int i = 0; i < NUM_LEDS; i++ ) {         // от 0 до первой трети
     leds_1[i] = CHSV(hue, 255, 255);  // HSV. Увеличивать HUE (цвет)
@@ -108,6 +122,9 @@ void loop() {
 
   Serial.print("ID: ");
   Serial.print(readingID);
+  Serial.print("\t");
+  Serial.print("time: ");
+  Serial.print(_time);
   Serial.print("\t");
   Serial.print("Force 1: ");
   Serial.print(FSR_1_reading);
@@ -125,18 +142,24 @@ void loop() {
   Serial.print(FSR_3_reading);
   Serial.print("\t");
   Serial.print("Flex 3: ");
-  Serial.printls(FSL_3_reading);
+  Serial.print(FSL_3_reading);
+  Serial.print("\t");
+  Serial.print("FSR_max: ");
+  Serial.print(FSR_max);
+  Serial.print("\t");
+  Serial.print("FSL_avg: ");
+  Serial.print(FSL_avg);
   Serial.print("\t");
   Serial.print("hue: ");
-  Serial.println(hue);
-  //logSDCard();
+  Serial.print(hue);
+  logSDCard();
   readingID++;
 }
 
 // Write the sensor readings on the SD card
 void logSDCard() {
   dataMessage = String(readingID) + "," + String(_time)+ "," + String(FSR_1_reading) + "," + String(FSR_2_reading) + "," + String(FSR_3_reading) + ","
-                + String(FSL_1_reading) + "," + String(FSL_2_reading) + "," + String(FSL_3_reading) + "\r\n";
+                + String(FSL_1_reading) + "," + String(FSL_2_reading) + "," + String(FSL_3_reading) + "," + String(FSR_max) + "," + String(FSL_avg) + "," + String(hue) + "," + String(F) + "\r\n";
   Serial.print("\t");
   Serial.print("Save data: ");
   Serial.println(dataMessage);
