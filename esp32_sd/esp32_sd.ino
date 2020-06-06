@@ -1,3 +1,4 @@
+// This code is intended for data handling, correction and sending, run on ESP32 WROOM dev kit v1
 // Libraries for SD card
 #include <FS.h>
 #include <FSImpl.h>
@@ -100,19 +101,19 @@ void loop() {
   FSL_avg = int((FSL_1_reading + FSL_2_reading + FSL_3_reading)/3);
   int hue_max = 210;
   int hue_min = 45;
-  FSR_max = map(FSR_max, 5, 2400, hue_max, hue_min);
-  FSL_avg = map(FSL_avg, 950, 1150, hue_max, hue_min);
+  FSR_max = map(FSR_max, 5, 2400, hue_min, hue_max);
+  FSL_avg = map(FSL_avg, 950, 1150, hue_min, hue_max);
   FSR_max = constrain(FSR_max, hue_min, hue_max);
   FSL_avg = constrain(FSL_avg, hue_min, hue_max);
   // setting up color of each actuator
-  hue = min(FSR_max, FSL_avg);
+  hue = int((FSR_max + FSL_avg)/2);
   // force estimation
-  F = map(hue, 165, 250, 0, 4);
-  
+  F = map(hue, hue_min, hue_max, 0, 100);
+
   for (int i = 0; i < NUM_LEDS; i++ ) {         // от 0 до первой трети
-    leds_1[i] = CHSV(hue, 255, 255);  // HSV. Увеличивать HUE (цвет)
-    leds_2[i] = CHSV(hue, 255, 255);
-    leds_3[i] = CHSV(hue, 255, 255);
+    leds_1[i] = CHSV(255-hue, 255, 255);  // HSV. Увеличивать HUE (цвет)
+    leds_2[i] = CHSV(255-hue, 255, 255);
+    leds_3[i] = CHSV(255-hue, 255, 255);
     
     // умножение i уменьшает шаг радуги
   }
@@ -151,8 +152,9 @@ void loop() {
   Serial.print(FSL_avg);
   Serial.print("\t");
   Serial.print("hue: ");
-  Serial.print(hue);
-  logSDCard();
+  Serial.println(hue);
+
+  //logSDCard();
   readingID++;
 }
 
